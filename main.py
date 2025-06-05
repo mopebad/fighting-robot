@@ -22,6 +22,7 @@ GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(LIGHT_SENSOR_PIN, GPIO.IN)
 GPIO.setup(LED_PIN, GPIO.OUT)
 GPIO.output(LED_PIN, GPIO.HIGH)  # LED always ON
+print("LED on pin 16 turned ON continuously.")
 
 def rc_time(pin):
     count = 0
@@ -33,36 +34,43 @@ def rc_time(pin):
     while GPIO.input(pin) == GPIO.LOW:
         count += 1
         if count > 10000:
+            print("rc_time: timeout reached")
             break
+    print(f"rc_time: sensor reading = {count}")
     return count
 
 def stop():
     for pin in motor_pins:
         GPIO.output(pin, GPIO.LOW)
+    print("Action: STOP motors")
 
 def forward():
     GPIO.output(LEFT_FORWARD, GPIO.HIGH)
     GPIO.output(LEFT_BACKWARD, GPIO.LOW)
     GPIO.output(RIGHT_FORWARD, GPIO.HIGH)
     GPIO.output(RIGHT_BACKWARD, GPIO.LOW)
+    print("Action: MOVE FORWARD")
 
 def backward():
     GPIO.output(LEFT_FORWARD, GPIO.LOW)
     GPIO.output(LEFT_BACKWARD, GPIO.HIGH)
     GPIO.output(RIGHT_FORWARD, GPIO.LOW)
     GPIO.output(RIGHT_BACKWARD, GPIO.HIGH)
+    print("Action: MOVE BACKWARD")
 
 def turn_left():
     GPIO.output(LEFT_FORWARD, GPIO.LOW)
     GPIO.output(LEFT_BACKWARD, GPIO.HIGH)
     GPIO.output(RIGHT_FORWARD, GPIO.HIGH)
     GPIO.output(RIGHT_BACKWARD, GPIO.LOW)
+    print("Action: TURN LEFT")
 
 def turn_right():
     GPIO.output(LEFT_FORWARD, GPIO.HIGH)
     GPIO.output(LEFT_BACKWARD, GPIO.LOW)
     GPIO.output(RIGHT_FORWARD, GPIO.LOW)
     GPIO.output(RIGHT_BACKWARD, GPIO.HIGH)
+    print("Action: TURN RIGHT")
 
 def main():
     motor_running = False
@@ -83,6 +91,7 @@ def main():
                     time.sleep(5)
                     state = "TURNING"
                     turn_direction = random.choice([turn_left, turn_right])
+                    print(f"Initial random turn chosen: {'LEFT' if turn_direction == turn_left else 'RIGHT'}")
                     state_start_time = time.time()
                 else:
                     print("Button pressed: Stopping robot")
@@ -96,11 +105,14 @@ def main():
                 current_time = time.time()
                 elapsed = current_time - state_start_time
 
+                print(f"State: {state} | Time elapsed in state: {elapsed:.2f}s | Light sensor: {light_level}")
+
                 if state == "TURNING":
                     turn_direction()
                     if elapsed > 0.7:
                         state = "FORWARD"
                         state_start_time = current_time
+                        print("Finished turning, switching to FORWARD")
 
                 elif state == "FORWARD":
                     if light_level < 300:
@@ -109,7 +121,9 @@ def main():
                             state = "TURNING"
                             turn_direction = random.choice([turn_left, turn_right])
                             state_start_time = current_time
+                            print(f"3 seconds forward done, random turn chosen: {'LEFT' if turn_direction == turn_left else 'RIGHT'}")
                     else:
+                        print("Edge detected (black) during FORWARD, switching to BACKWARD")
                         state = "BACKWARD"
                         state_start_time = current_time
                         stop()
@@ -120,11 +134,15 @@ def main():
                         state = "TURNING"
                         turn_direction = random.choice([turn_left, turn_right])
                         state_start_time = current_time
+                        print(f"Reversed for 1 second, random turn chosen: {'LEFT' if turn_direction == turn_left else 'RIGHT'}")
 
                 else:
+                    print("Unknown state, stopping motors as fallback")
                     stop()
 
             else:
+                if state != "IDLE":
+                    print("Motor stopped, setting state to IDLE")
                 stop()
                 state = "IDLE"
 
